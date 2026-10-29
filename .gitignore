@@ -1,0 +1,10 @@
+
+# Node modules (all folders)
+node_modules/
+
+# Environment variables (all folders)
+.env
+.env.*
+
+# Allow example env files
+!.env.example
