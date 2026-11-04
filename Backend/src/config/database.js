@@ -4,12 +4,14 @@ const mongoose = require("mongoose");
 let connectionPromise = null;
 
 async function connectDB() {
-  // Already connected
+  if (!process.env.MONGO_URI) {
+    throw new Error("MONGO_URI is missing from environment variables");
+  }
+
   if (mongoose.connection.readyState === 1) {
     return mongoose.connection;
   }
 
-  // Reuse existing connection attempt
   if (!connectionPromise) {
     connectionPromise = mongoose
       .connect(process.env.MONGO_URI, {
@@ -22,6 +24,7 @@ async function connectDB() {
       })
       .catch((error) => {
         connectionPromise = null;
+        console.error("MongoDB connection failed:", error.message);
         throw error;
       });
   }

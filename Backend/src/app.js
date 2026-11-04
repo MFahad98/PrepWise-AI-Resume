@@ -35,6 +35,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Health check (does not require MongoDB)
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    status: "API is working",
+  });
+});
+
+// Handle OPTIONS before database connection
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 // MongoDB connection middleware
 app.use(async (req, res, next) => {
   try {
@@ -50,10 +65,6 @@ app.use(async (req, res, next) => {
 });
 
 // API Routes
-app.get("/api/health", (req, res) => {
-  res.json({ status: "API is working" });
-});
-
 app.use("/api/auth", authRouter);
 app.use("/api/interview", interviewRouter);
 
