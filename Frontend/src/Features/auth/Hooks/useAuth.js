@@ -25,7 +25,7 @@ export const useAuth = () => {
 
   const handleLogout = async () => {
     setLoading(true);
-    const data = await logoutUser();
+    await logoutUser();
     setUser(null);
     setLoading(false);
   } 
