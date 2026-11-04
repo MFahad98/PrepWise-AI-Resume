@@ -1,12 +1,32 @@
-const mongoose = require("mongoose"); 
 
-mongoose
- .connect(`${process.env.MONGO_URI}/resume`)
-  .then(function () {
-    console.log("connected db");
-  })
-  .catch(function (err) {
-    console.log(err);
-  });
+const mongoose = require("mongoose");
 
-module.exports = mongoose.connection;
+let connectionPromise = null;
+
+async function connectDB() {
+  // Already connected
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  // Reuse existing connection attempt
+  if (!connectionPromise) {
+    connectionPromise = mongoose
+      .connect(process.env.MONGO_URI, {
+        dbName: "resume",
+        serverSelectionTimeoutMS: 10000,
+      })
+      .then(() => {
+        console.log("MongoDB connected successfully");
+        return mongoose.connection;
+      })
+      .catch((error) => {
+        connectionPromise = null;
+        throw error;
+      });
+  }
+
+  return connectionPromise;
+}
+
+module.exports = connectDB;
