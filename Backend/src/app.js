@@ -12,7 +12,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:5000",
-  "https://prep-wise-ai-resume.vercel.app",
+  "https://prep-wise-ai-resume-kw22.vercel.app",
 ].filter(Boolean);
 
 app.use(
