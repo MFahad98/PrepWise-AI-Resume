@@ -1,7 +1,8 @@
+
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:3000/api/auth",
+  baseURL: `${process.env.REACT_APP_API_URL}/api/auth`,
   withCredentials: true,
 });
 
@@ -21,10 +22,8 @@ export const loginUser = async ({email,password}) => {
     }
 
     catch (error) { 
-
         throw error;
     }
-
 } 
 
 export const logoutUser = async () => {
@@ -46,4 +45,3 @@ export const getMe = async () => {
         throw error;
     }
 }
-
