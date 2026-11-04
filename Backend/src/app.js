@@ -10,8 +10,9 @@ const interviewRouter = require("./routes/interview.route");
 const app = express();
 
 const allowedOrigins = [
+  "http://localhost:3000",
   "http://localhost:5000",
-  process.env.FRONTEND_URL,
+  "https://prep-wise-ai-resume.vercel.app",
 ].filter(Boolean);
 
 app.use(
