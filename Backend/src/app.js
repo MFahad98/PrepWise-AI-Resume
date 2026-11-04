@@ -50,6 +50,10 @@ app.use(async (req, res, next) => {
 });
 
 // API Routes
+app.get("/api/health", (req, res) => {
+  res.json({ status: "API is working" });
+});
+
 app.use("/api/auth", authRouter);
 app.use("/api/interview", interviewRouter);
 
