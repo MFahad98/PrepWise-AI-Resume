@@ -13,7 +13,8 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:5000",
   "https://prep-wise-ai-resume-kw22.vercel.app",
-].filter(Boolean);
+  "https://prep-wise-ai-resume.vercel.app",
+];
 
 app.use(
   cors({
@@ -25,6 +26,8 @@ app.use(
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
