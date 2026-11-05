@@ -2,7 +2,7 @@ const { GoogleGenAI } = require("@google/genai");
 const { z } = require("zod");
 const fs = require("fs");
 
-const puppeteer = require("puppeteer");
+const puppeteer = require("puppeteer-core");
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GOOGLE_GENAI_API_KEY,
@@ -166,7 +166,7 @@ ${jobDescription}
     throw error;
   }
 }
-function getBrowserExecutablePath() {
+function getLocalBrowserExecutablePath() {
     const configuredPath =
         process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_PATH;
     const systemPaths = [
@@ -182,6 +182,7 @@ function getBrowserExecutablePath() {
             `${process.env.PROGRAMFILES}\\Microsoft\\Edge\\Application\\msedge.exe`,
         "/usr/bin/google-chrome",
         "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     ];
 
@@ -189,22 +190,36 @@ function getBrowserExecutablePath() {
         return configuredPath;
     }
 
-    const systemPath = systemPaths.find(
+    return systemPaths.find(
         (browserPath) => browserPath && fs.existsSync(browserPath)
     );
-    if (systemPath) {
-        return systemPath;
+}
+
+// Vercel (serverless) pe normal Chrome nahi hota, isliye @sparticuz/chromium use hota hai.
+// Local pe aapka installed Chrome/Edge use hoga.
+async function launchBrowser() {
+    const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+    if (isServerless) {
+        const chromium = require("@sparticuz/chromium");
+        return puppeteer.launch({
+            args: await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" }),
+            executablePath: await chromium.executablePath(),
+            headless: "shell",
+        });
     }
 
-    const bundledPath = puppeteer.executablePath();
-    return fs.existsSync(bundledPath) ? bundledPath : undefined;
+    const executablePath = getLocalBrowserExecutablePath();
+    if (!executablePath) {
+        throw new Error(
+            "Chrome/Edge nahi mila. .env mein CHROME_PATH set karein (local development ke liye)."
+        );
+    }
+    return puppeteer.launch({ executablePath, headless: true });
 }
 
 async function generatePdfFromHtml(htmlContent) {
-    const executablePath = getBrowserExecutablePath();
-    const browser = await puppeteer.launch(
-        executablePath ? { executablePath } : undefined
-    );
+    const browser = await launchBrowser();
 
     try {
         const page = await browser.newPage();
@@ -212,6 +227,7 @@ async function generatePdfFromHtml(htmlContent) {
 
         return await page.pdf({
             format: "A4",
+            printBackground: true,
             margin: {
                 top: "20mm",
                 bottom: "20mm",

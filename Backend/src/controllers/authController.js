@@ -4,6 +4,16 @@ const jwt = require("jsonwebtoken");
 const blacklistTokenModel = require("../models/blacklistModel");
 const JWT_SECRET = process.env.JWT_SECRET || "mysecretkey";
 
+// Frontend aur backend alag Vercel domains pe hain (cross-site),
+// isliye cookie ko sameSite "none" + secure chahiye, warna browser cookie bhejega hi nahi.
+const isProduction = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
+  path: "/",
+};
+
 async function registerController(req, res) {
   let { username, email, password } = req.body;
   if (!username || !email || !password) {
@@ -28,7 +38,7 @@ async function registerController(req, res) {
     JWT_SECRET,
     { expiresIn: "1d" },
   );
-    res.cookie("token", token);
+    res.cookie("token", token, { ...cookieOptions, maxAge: 24 * 60 * 60 * 1000 });
   res.status(201).json({
     message: "user created successfully",
     user: {
@@ -63,7 +73,7 @@ async function loginController(req, res) {
     JWT_SECRET,
     { expiresIn: "1d" },
   );
-    res.cookie("token", token);
+    res.cookie("token", token, { ...cookieOptions, maxAge: 24 * 60 * 60 * 1000 });
   res.status(201).json({
     message: "login successful",
     user: {
@@ -82,7 +92,7 @@ async function logoutController(req, res) {
   if (token) {
     await blacklistTokenModel.create({ token });
   }
-  res.clearCookie("token");
+  res.clearCookie("token", cookieOptions);
   res.status(200).json({ message: "logout successful" });
 }
 

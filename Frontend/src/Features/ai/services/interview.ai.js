@@ -1,7 +1,10 @@
 import axios from "axios";
  
+// Trailing slash hata do taake "//api" na bane
+const API_URL = (process.env.REACT_APP_API_URL || "http://localhost:3000").replace(/\/+$/, "");
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:3000",
+  baseURL: API_URL,
   withCredentials: true,
 });
 
@@ -23,18 +26,15 @@ export const generateInterviewReport = async ({
   formData.append("resume", resumeFile);
   formData.append("title", title);
 
-  const response = await api.post("/api/interview/", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  // Content-Type khud set mat karo, axios FormData ke saath boundary samet khud lagata hai
+  const response = await api.post("/api/interview/", formData);
 
   return response.data;
 };
 
 export const generateInterviewReportById = async (interviewId) => {
    
-  const response = await api.get(`/api/interview/report/${interviewId}/`);
+  const response = await api.get(`/api/interview/report/${interviewId}`);
 
   return response.data;
 };

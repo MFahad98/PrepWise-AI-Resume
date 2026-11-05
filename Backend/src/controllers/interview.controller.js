@@ -13,6 +13,12 @@ async function generateInterviewReportController(req, res) {
     });
   }
 
+  if (!req.file) {
+    return res.status(400).json({
+      message: "Resume PDF is required",
+    });
+  }
+
   const parser = new pdfparse.PDFParse({ data: req.file.buffer });
   const resumeContent = await parser.getText();
 
@@ -90,6 +96,7 @@ async function generateResumePdfController(req, res) {
         "Content-Disposition": `attachment; filename=resume_${interviewReportId}.pdf`
     })
 
-    res.send(pdfBuffer)
+    // puppeteer naye versions mein Uint8Array deta hai, Buffer banana zaroori hai
+    res.send(Buffer.from(pdfBuffer))
 }
 module.exports = { generateInterviewReportController,getAllInterviewReportController,getInterviewReportByIdController,generateResumePdfController };
