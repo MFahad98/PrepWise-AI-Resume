@@ -1,11 +1,15 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index" }
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
   ],
   "functions": {
     "api/index.js": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "node_modules/@napi-rs/**"
     }
   }
 }

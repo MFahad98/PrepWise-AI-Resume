@@ -1,4 +1,18 @@
-const pdfparse = require("pdf-parse");
+// pdf-parse ko sirf zaroorat pe load karo (lazy). Agar ye top pe load ho aur
+// Vercel pe @napi-rs/canvas na mile to POORA server crash hota hai (FUNCTION_INVOCATION_FAILED).
+let PDFParseClass = null;
+let pdfCanvasFactory;
+function getPDFParse() {
+  if (!PDFParseClass) {
+    // Pehle worker load karo: ye @napi-rs/canvas (DOMMatrix polyfill) laata hai
+    const { CanvasFactory, getData } = require("pdf-parse/worker");
+    const { PDFParse } = require("pdf-parse");
+    PDFParse.setWorker(getData());
+    PDFParseClass = PDFParse;
+    pdfCanvasFactory = CanvasFactory;
+  }
+  return PDFParseClass;
+}
 const {generativeAIInterviewReport,generateResumePdf} = require("../services/ai.services");
 const interviewReportModel = require("../models/interviewReportModel");
 
@@ -19,7 +33,8 @@ async function generateInterviewReportController(req, res) {
     });
   }
 
-  const parser = new pdfparse.PDFParse({ data: req.file.buffer });
+  const PDFParse = getPDFParse();
+  const parser = new PDFParse({ data: req.file.buffer, CanvasFactory: pdfCanvasFactory });
   const resumeContent = await parser.getText();
 
   const generativeReportAi = await generativeAIInterviewReport({
