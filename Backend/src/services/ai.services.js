@@ -147,7 +147,6 @@ ${jobDescription}
     }
 
     const report = interviewReportSchema.parse(JSON.parse(response.text));
-    console.log("RAW GEMINI RESPONSE:", report);
 
     return report;
   } catch (error) {
@@ -166,6 +165,11 @@ ${jobDescription}
     throw error;
   }
 }
+const isServerless = Boolean(
+    process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+);
+
+// Local machine par installed Chrome / Edge dhoondo
 function getLocalBrowserExecutablePath() {
     const configuredPath =
         process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_PATH;
@@ -180,10 +184,14 @@ function getLocalBrowserExecutablePath() {
             `${process.env.LOCALAPPDATA}\\Microsoft\\Edge\\Application\\msedge.exe`,
         process.env.PROGRAMFILES &&
             `${process.env.PROGRAMFILES}\\Microsoft\\Edge\\Application\\msedge.exe`,
+        process.env["PROGRAMFILES(X86)"] &&
+            `${process.env["PROGRAMFILES(X86)"]}\\Microsoft\\Edge\\Application\\msedge.exe`,
         "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
         "/usr/bin/chromium",
         "/usr/bin/chromium-browser",
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
     ];
 
     if (configuredPath && fs.existsSync(configuredPath)) {
@@ -195,15 +203,17 @@ function getLocalBrowserExecutablePath() {
     );
 }
 
-// Vercel (serverless) pe normal Chrome nahi hota, isliye @sparticuz/chromium use hota hai.
-// Local pe aapka installed Chrome/Edge use hoga.
 async function launchBrowser() {
-    const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
-
     if (isServerless) {
+        // Vercel par lightweight serverless Chromium use hota hai
         const chromium = require("@sparticuz/chromium");
+        chromium.setGraphicsMode = false;
+
         return puppeteer.launch({
-            args: await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" }),
+            args: puppeteer.defaultArgs({
+                args: chromium.args,
+                headless: "shell",
+            }),
             executablePath: await chromium.executablePath(),
             headless: "shell",
         });
@@ -212,9 +222,10 @@ async function launchBrowser() {
     const executablePath = getLocalBrowserExecutablePath();
     if (!executablePath) {
         throw new Error(
-            "Chrome/Edge nahi mila. .env mein CHROME_PATH set karein (local development ke liye)."
+            "Chrome/Edge not found. Install Google Chrome or set PUPPETEER_EXECUTABLE_PATH in .env"
         );
     }
+
     return puppeteer.launch({ executablePath, headless: true });
 }
 
@@ -223,7 +234,11 @@ async function generatePdfFromHtml(htmlContent) {
 
     try {
         const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+        // networkidle0 external fonts/images ke liye wait karta hai, timeout limit ke saath
+        await page.setContent(htmlContent, {
+            waitUntil: "networkidle0",
+            timeout: 20000,
+        });
 
         return await page.pdf({
             format: "A4",
@@ -268,11 +283,16 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
     })
 
 
-    const jsonContent = JSON.parse(response.text)
+    if (!response.text) {
+        throw new Error("Gemini returned an empty response.")
+    }
+
+    const jsonContent = resumePdfSchema.parse(JSON.parse(response.text))
 
     const pdfBuffer = await generatePdfFromHtml(jsonContent.html)
 
-    return pdfBuffer
+    // Puppeteer Uint8Array return karta hai, Express ke liye Buffer mein convert
+    return Buffer.from(pdfBuffer)
 
 }
 

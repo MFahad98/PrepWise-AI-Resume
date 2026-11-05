@@ -1,35 +1,45 @@
-
 const mongoose = require("mongoose");
 
-let connectionPromise = null;
+/**
+ * Serverless-friendly MongoDB connection.
+ * Vercel par har request naya function instance start kar sakti hai,
+ * is liye connection ko global cache mein rakhte hain taake har request
+ * par naya connection na bane.
+ */
+let cached = global._mongooseConnection;
+if (!cached) {
+  cached = global._mongooseConnection = { conn: null, promise: null };
+}
 
 async function connectDB() {
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    return cached.conn;
+  }
+
   if (!process.env.MONGO_URI) {
-    throw new Error("MONGO_URI is missing from environment variables");
+    throw new Error("MONGO_URI environment variable is not set");
   }
 
-  if (mongoose.connection.readyState === 1) {
-    return mongoose.connection;
-  }
-
-  if (!connectionPromise) {
-    connectionPromise = mongoose
+  if (!cached.promise) {
+    cached.promise = mongoose
       .connect(process.env.MONGO_URI, {
-        dbName: "resume",
+        dbName: process.env.MONGO_DB_NAME || "resume",
         serverSelectionTimeoutMS: 10000,
+        maxPoolSize: 10,
       })
-      .then(() => {
-        console.log("MongoDB connected successfully");
-        return mongoose.connection;
+      .then((m) => {
+        console.log("MongoDB connected");
+        return m;
       })
-      .catch((error) => {
-        connectionPromise = null;
-        console.error("MongoDB connection failed:", error.message);
-        throw error;
+      .catch((err) => {
+        // Fail hone par promise reset karo taake agli request dobara try kare
+        cached.promise = null;
+        throw err;
       });
   }
 
-  return connectionPromise;
+  cached.conn = await cached.promise;
+  return cached.conn;
 }
 
 module.exports = connectDB;

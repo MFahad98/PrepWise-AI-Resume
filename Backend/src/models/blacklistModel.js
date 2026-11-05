@@ -8,6 +8,7 @@ const blacklistTokenSchema = new mongoose.Schema({
   timestamp: {
     type: Date,
     default: Date.now,
+    expires: 60 * 60 * 24, // JWT 1 din mein expire hota hai, is ke baad blacklist entry auto-delete
   },
 });
 

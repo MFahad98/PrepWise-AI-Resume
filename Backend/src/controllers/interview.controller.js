@@ -1,24 +1,10 @@
-// pdf-parse ko sirf zaroorat pe load karo (lazy). Agar ye top pe load ho aur
-// Vercel pe @napi-rs/canvas na mile to POORA server crash hota hai (FUNCTION_INVOCATION_FAILED).
-let PDFParseClass = null;
-let pdfCanvasFactory;
-function getPDFParse() {
-  if (!PDFParseClass) {
-    // Pehle worker load karo: ye @napi-rs/canvas (DOMMatrix polyfill) laata hai
-    const { CanvasFactory, getData } = require("pdf-parse/worker");
-    const { PDFParse } = require("pdf-parse");
-    PDFParse.setWorker(getData());
-    PDFParseClass = PDFParse;
-    pdfCanvasFactory = CanvasFactory;
-  }
-  return PDFParseClass;
-}
+const pdfparse = require("pdf-parse");
 const {generativeAIInterviewReport,generateResumePdf} = require("../services/ai.services");
 const interviewReportModel = require("../models/interviewReportModel");
 
 
 async function generateInterviewReportController(req, res) {
-  const { selfDescription, jobDescription } = req.body;
+  const { selfDescription, jobDescription } = req.body ?? {};
   const title = req.body?.title?.trim();
 
   if (!title) {
@@ -29,12 +15,17 @@ async function generateInterviewReportController(req, res) {
 
   if (!req.file) {
     return res.status(400).json({
-      message: "Resume PDF is required",
+      message: "Resume PDF file is required",
     });
   }
 
-  const PDFParse = getPDFParse();
-  const parser = new PDFParse({ data: req.file.buffer, CanvasFactory: pdfCanvasFactory });
+  if (!jobDescription) {
+    return res.status(400).json({
+      message: "Job description is required",
+    });
+  }
+
+  const parser = new pdfparse.PDFParse({ data: req.file.buffer });
   const resumeContent = await parser.getText();
 
   const generativeReportAi = await generativeAIInterviewReport({
@@ -94,7 +85,10 @@ async function getAllInterviewReportController(req,res){
 async function generateResumePdfController(req, res) {
     const { interviewReportId } = req.params
 
-    const interviewReport = await interviewReportModel.findById(interviewReportId)
+    const interviewReport = await interviewReportModel.findOne({
+        _id: interviewReportId,
+        user: req.user.id,
+    })
 
     if (!interviewReport) {
         return res.status(404).json({
@@ -111,7 +105,6 @@ async function generateResumePdfController(req, res) {
         "Content-Disposition": `attachment; filename=resume_${interviewReportId}.pdf`
     })
 
-    // puppeteer naye versions mein Uint8Array deta hai, Buffer banana zaroori hai
-    res.send(Buffer.from(pdfBuffer))
+    res.send(pdfBuffer)
 }
 module.exports = { generateInterviewReportController,getAllInterviewReportController,getInterviewReportByIdController,generateResumePdfController };

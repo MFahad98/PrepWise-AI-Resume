@@ -1,15 +1,10 @@
 {
-  "version": 2,
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/api/index"
-    }
-  ],
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/index.js": {
       "maxDuration": 60,
-      "includeFiles": "node_modules/@napi-rs/**"
+      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
     }
-  }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
 }
