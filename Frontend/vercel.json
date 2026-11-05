@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://YOUR-BACKEND-URL.vercel.app/api/:path*"
+      "destination": "https://prep-wise-ai-resume.vercel.app/api/:path*"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
