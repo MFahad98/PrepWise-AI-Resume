@@ -3,7 +3,7 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 60,
-      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
+      "includeFiles": "node_modules/{@sparticuz/chromium/bin,pdf-parse/dist/worker}/**"
     }
   },
   "rewrites": [{ "source": "/(.*)", "destination": "/api" }]

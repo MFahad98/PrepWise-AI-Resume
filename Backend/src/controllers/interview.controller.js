@@ -1,4 +1,9 @@
+// pdf-parse/worker PEHLE load karna zaroori hai: yeh @napi-rs/canvas (DOMMatrix polyfill)
+// ko load karta hai taake Vercel serverless bundle mein woh shamil ho jaye.
+const { CanvasFactory, getPath } = require("pdf-parse/worker");
 const pdfparse = require("pdf-parse");
+
+pdfparse.PDFParse.setWorker(getPath());
 const {generativeAIInterviewReport,generateResumePdf} = require("../services/ai.services");
 const interviewReportModel = require("../models/interviewReportModel");
 
@@ -25,8 +30,16 @@ async function generateInterviewReportController(req, res) {
     });
   }
 
-  const parser = new pdfparse.PDFParse({ data: req.file.buffer });
-  const resumeContent = await parser.getText();
+  const parser = new pdfparse.PDFParse({ data: req.file.buffer, CanvasFactory });
+  let resumeContent;
+  try {
+    resumeContent = await parser.getText();
+  } catch (err) {
+    console.error("PDF parse failed:", err.message);
+    return res.status(400).json({ message: "Could not read the resume PDF" });
+  } finally {
+    await parser.destroy().catch(() => {});
+  }
 
   const generativeReportAi = await generativeAIInterviewReport({
     resume: resumeContent.text,
