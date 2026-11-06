@@ -21,14 +21,14 @@ export const generateInterviewReport = async ({
   formData.append("resume", resumeFile);
   formData.append("title", title);
 
-  const response = await api.post("/api/interview/", formData);
+  const response = await api.post("/api/interview", formData);
 
   return response.data;
 };
 
 export const generateInterviewReportById = async (interviewId) => {
    
-  const response = await api.get(`/api/interview/report/${interviewId}/`);
+  const response = await api.get(`/api/interview/report/${interviewId}`);
 
   return response.data;
 };
