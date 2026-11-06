@@ -66,7 +66,7 @@ const Footer = () => {
       <div className="border-t border-slate-800">
         <div className="container-page flex flex-col items-center justify-between gap-2 py-6 text-center text-sm sm:flex-row sm:text-left">
           <p>
-            © {year} ResumeAI. All rights reserved by{" "}
+            © {year} PrepWise AI. All rights reserved by{" "}
             <span className="font-semibold text-white">Muhammad Fahad</span>.
           </p>
           <p className="text-slate-500">Built with React, Node.js &amp; Gemini AI</p>

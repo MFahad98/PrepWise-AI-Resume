@@ -163,7 +163,7 @@ const Landing = () => {
             </h1>
 
             <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
-              ResumeAI compares your resume with the job you want and builds a
+              PrepWise AI compares your resume with the job you want and builds a
               personal report: match score, likely interview questions with
               model answers, skill gaps and a 7-day plan to close them.
             </p>

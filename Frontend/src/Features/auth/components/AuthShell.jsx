@@ -4,7 +4,7 @@ import { CheckCircleIcon } from "../../../components/ui/Icons";
 const AuthShell = ({ title, subtitle, children, footer }) => (
   <section className="container-page grid min-h-[calc(100vh-4rem)] grid-cols-1 items-center gap-12 py-12 lg:grid-cols-2 lg:py-16">
     <div className="hidden lg:block">
-      <p className="eyebrow">ResumeAI</p>
+      <p className="eyebrow">PrepWise AI</p>
       <h2 className="mt-3 max-w-md text-4xl font-bold leading-tight tracking-tight">
         Prepare smarter for the role you actually want.
       </h2>
