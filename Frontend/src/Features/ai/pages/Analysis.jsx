@@ -8,6 +8,7 @@ const Analytics = () => {
   const [selectedBehavioural, setSelectedBehavioural] = useState(0);
 
   const { loading,report, getReportById,getResumePdf } = useInterview();
+  const [pdfError, setPdfError] = useState("");
   const { interviewId } = useParams();
 
   useEffect(() => {
@@ -320,10 +321,15 @@ const Analytics = () => {
                 {navigation.find((item) => item.id === activeTab)?.label}
               </h1>
             </div>
+            <div className="flex flex-col items-start">
  <button
                 type="button"
                 // onClick={handleDownloadReport}
-                  onClick={() => { getResumePdf(interviewId) }}
+                  onClick={async () => {
+                    setPdfError("");
+                    const err = await getResumePdf(interviewId);
+                    if (err) setPdfError(err);
+                  }}
                 disabled={!report || loading}
                 className="inline-flex items-center gap-2 rounded-xl border border-indigo-400/30 bg-indigo-500/15 px-4 py-2.5 text-sm font-semibold text-indigo-200 transition hover:border-indigo-300/50 hover:bg-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Download interview report as PDF"
@@ -338,8 +344,14 @@ const Analytics = () => {
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3" />
                 </svg>
-                Download Resume PDF
+                {loading && report ? "Generating PDF..." : "Download Resume PDF"}
               </button>
+              {pdfError && (
+                <p className="mt-2 max-w-xs text-xs text-red-400" role="alert">
+                  {pdfError}
+                </p>
+              )}
+            </div>
             <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-300">
               Analysis Ready
             </span>

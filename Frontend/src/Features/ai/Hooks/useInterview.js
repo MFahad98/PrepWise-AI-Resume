@@ -124,24 +124,44 @@ export const useInterview = () => {
   }, [setLoading, setReports]);
 
   // create resume pdf
-    const getResumePdf = async (interviewReportId) => {
-        setLoading(true)
-        let response = null
-        try {
-            response = await generateResumePdf({ interviewReportId })
-            const url = window.URL.createObjectURL(new Blob([ response ], { type: "application/pdf" }))
-            const link = document.createElement("a")
-            link.href = url
-            link.setAttribute("download", `resume_${interviewReportId}.pdf`)
-            document.body.appendChild(link)
-            link.click()
+  // Success par null, fail hone par error message return karta hai
+  const getResumePdf = async (interviewReportId) => {
+    setLoading(true);
+    try {
+      const response = await generateResumePdf({ interviewReportId });
+      const url = window.URL.createObjectURL(
+        new Blob([response], { type: "application/pdf" })
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `resume_${interviewReportId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      return null;
+    } catch (error) {
+      // responseType "blob" hai, is liye error ka JSON bhi blob mein aata hai
+      let message = "Could not download the resume PDF. Please try again.";
+      const data = error.response?.data;
+      try {
+        if (data instanceof Blob) {
+          const parsed = JSON.parse(await data.text());
+          if (parsed?.message) message = parsed.message;
+        } else if (data?.message) {
+          message = data.message;
         }
-        catch (error) {
-            console.log(error)
-        } finally {
-            setLoading(false)
+      } catch (_) {
+        if (error.response?.status === 504) {
+          message = "PDF generation timed out. Please try again.";
         }
+      }
+      console.error("Resume PDF error:", message);
+      return message;
+    } finally {
+      setLoading(false);
     }
+  };
   // Automatically fetch report based on URL
   useEffect(() => {
     if (interviewId) {

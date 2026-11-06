@@ -86,7 +86,9 @@ app.use((err, req, res, next) => {
     return res.status(400).json({ message: err.message });
   }
 
-  const status = err.status || err.statusCode || 500;
+  // Sirf valid HTTP status codes aage bhejo (Gemini/3rd-party errors ke ajeeb codes nahi)
+  const rawStatus = Number(err.status || err.statusCode);
+  const status = rawStatus >= 400 && rawStatus < 600 ? rawStatus : 500;
   res.status(status).json({
     message: status === 500 ? "Internal server error" : err.message,
   });
