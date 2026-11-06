@@ -4,13 +4,11 @@ import {
   generateInterviewReportById, generateResumePdf
 } from "../services/interview.ai";
 
-import { useContext, useEffect, useCallback } from "react";
+import { useContext, useCallback } from "react";
 import { InterviewContext } from "../interview.context";
-import { useParams } from "react-router-dom";
 
 export const useInterview = () => {
   const context = useContext(InterviewContext);
-  const { interviewId } = useParams();
 
   if (!context) {
     throw new Error(
@@ -27,7 +25,7 @@ export const useInterview = () => {
     setReports,
   } = context;
 
-  // Generate a new interview report
+  // Generate a new interview report -> { report, error }
   const generateReport = async ({
     jobDescription,
     selfDescription,
@@ -45,19 +43,26 @@ export const useInterview = () => {
       });
 
       const interviewReport = response?.interviewReport ?? null;
-
       if (interviewReport) {
         setReport(interviewReport);
+        // List ko bhi foran update karo taake dashboard par naya report dikhe
+        setReports((prev) => (Array.isArray(prev) ? [interviewReport, ...prev] : prev));
       }
 
-      return interviewReport;
+      return {
+        report: interviewReport,
+        error: interviewReport ? null : "Report could not be generated. Please try again.",
+      };
     } catch (error) {
-      console.error(
-        "Error generating interview report:",
-        error.response?.data?.message || error.message
-      );
-
-      return null;
+      const message =
+        error.response?.data?.message ||
+        (error.response?.status === 504
+          ? "The AI took too long to respond. Please try again."
+          : error.response
+          ? "Report could not be generated. Please try again."
+          : "Unable to reach the server. Check your connection and try again.");
+      console.error("Error generating interview report:", message);
+      return { report: null, error: message };
     } finally {
       setLoading(false);
     }
@@ -71,8 +76,6 @@ export const useInterview = () => {
 
     try {
       const response = await generateInterviewReportById(id);
-
-      console.log("Single Report Response:", response);
 
       const interviewReport = response?.interviewReport ?? null;
 
@@ -98,8 +101,6 @@ export const useInterview = () => {
 
     try {
       const response = await getAllReports();
-
-      console.log("All Reports Response:", response);
 
       // Backend response mein reports ki actual property verify karein
       const allReports =
@@ -162,15 +163,6 @@ export const useInterview = () => {
       setLoading(false);
     }
   };
-  // Automatically fetch report based on URL
-  useEffect(() => {
-    if (interviewId) {
-      getReportById(interviewId);
-    } else {
-      getReports();
-    }
-  }, [interviewId, getReportById, getReports]);
-
   return {
     loading,
     report,

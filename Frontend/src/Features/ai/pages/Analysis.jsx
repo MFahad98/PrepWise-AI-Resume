@@ -1,607 +1,420 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { useInterview } from "../Hooks/useInterview";
-import { useParams } from "react-router-dom";
+import ScoreRing, { scoreTone } from "../../../components/ui/ScoreRing";
+import Spinner from "../../../components/ui/Spinner";
+import {
+  AlertIcon,
+  ArrowLeftIcon,
+  CalendarIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  CodeIcon,
+  DownloadIcon,
+  RouteIcon,
+  SparkleIcon,
+  TargetIcon,
+  UsersIcon,
+} from "../../../components/ui/Icons";
 
-const Analytics = () => {
-  const [activeTab, setActiveTab] = useState("technical");
-  const [selectedTechnical, setSelectedTechnical] = useState(0);
-  const [selectedBehavioural, setSelectedBehavioural] = useState(0);
+const TABS = [
+  { id: "technical", label: "Technical", icon: CodeIcon },
+  { id: "behavioral", label: "Behavioral", icon: UsersIcon },
+  { id: "roadmap", label: "Roadmap", icon: RouteIcon },
+];
 
-  const { loading,report, getReportById,getResumePdf } = useInterview();
-  const [pdfError, setPdfError] = useState("");
-  const { interviewId } = useParams();
+const SEVERITY_STYLES = {
+  high: "bg-rose-50 text-rose-700 ring-rose-600/20",
+  medium: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  low: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+};
+const SEVERITY_ORDER = { high: 0, medium: 1, low: 2 };
 
-  useEffect(() => {
-     const fetchReport = async () => {
-    if (interviewId) {
-      await getReportById(interviewId);
-    }
-  };
+const asArray = (value) => (Array.isArray(value) ? value : []);
 
-  fetchReport();
-  }, [interviewId, getReportById]);
-  // Safe default data while the API report is loading.
-  const data = report || {
-    matchScore: 0,
-    technicalQuestions: [],
-    behaviourQuestions: [],
-    preparationPlan: [],
-    skillGaps: [],
-  };
+/* ---------------------------- Question accordion ---------------------------- */
+const QuestionList = ({ items, type }) => {
+  const [openIndex, setOpenIndex] = useState(0);
 
-  // Ensure all collections are arrays.
-  const technicalQuestions = Array.isArray(data.technicalQuestions)
-    ? data.technicalQuestions
-    : [];
-
-  const behaviourQuestions = Array.isArray(data.behaviourQuestions)
-    ? data.behaviourQuestions
-    : [];
-
-  const preparationPlan = Array.isArray(data.preparationPlan)
-    ? data.preparationPlan
-    : [];
-
-  const skillGaps = Array.isArray(data.skillGaps)
-    ? data.skillGaps
-    : [];
-
-  const matchScore = Math.min(
-    100,
-    Math.max(0, Number(data.matchScore) || 0)
-  );
-
-  const navigation = [
-    {
-      id: "technical",
-      label: "Technical Questions",
-      icon: "⌘",
-    },
-    {
-      id: "behavioural",
-      label: "Behavioral Questions",
-      icon: "◈",
-    },
-    {
-      id: "roadmap",
-      label: "Road Map",
-      icon: "↗",
-    },
-  ];
-
-  const getSeverityStyle = (severity) => {
-    switch (severity?.toLowerCase()) {
-      case "high":
-        return "border-red-400/20 bg-red-400/10 text-red-300";
-
-      case "medium":
-        return "border-amber-400/20 bg-amber-400/10 text-amber-300";
-
-      case "low":
-        return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
-
-      default:
-        return "border-white/10 bg-white/5 text-zinc-400";
-    }
-  };
-
-  // FAQ accordion for interview questions.
-  const renderQuestions = (items, type, selected, setSelected) => {
-    if (items.length === 0) {
-      return (
-        <div className="rounded-xl border border-white/10 p-6 text-center">
-          <p className="text-sm text-zinc-400">
-            No questions available.
-          </p>
-        </div>
-      );
-    }
-
-  if (loading && !report) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#09090b] text-white">
-        <p className="text-sm text-zinc-400">
-          Loading interview report...
-        </p>
-      </div>
-    );
+  if (items.length === 0) {
+    return <p className="card px-6 py-10 text-center text-sm text-slate-500">No questions available.</p>;
   }
-    return (
-      <div className="space-y-3">
-        {items.map((item, index) => {
-          const isOpen = selected === index;
 
-          return (
-            <div
-              key={item._id || `${type}-${index}`}
-              className={`overflow-hidden rounded-xl border transition-colors duration-300 ${
-                isOpen
-                  ? "border-indigo-400/40 bg-indigo-500/[0.04]"
-                  : "border-white/10 bg-white/[0.02] hover:border-white/20"
-              }`}
+  return (
+    <div className="space-y-3">
+      {items.map((item, index) => {
+        const isOpen = openIndex === index;
+        const panelId = `${type}-panel-${index}`;
+        return (
+          <div
+            key={item._id || `${type}-${index}`}
+            className={`overflow-hidden rounded-2xl border bg-white transition-colors ${
+              isOpen ? "border-indigo-200 shadow-card" : "border-slate-200 hover:border-slate-300"
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => setOpenIndex(isOpen ? -1 : index)}
+              aria-expanded={isOpen}
+              aria-controls={panelId}
+              className="flex w-full items-start gap-4 p-5 text-left focus:outline-none focus-visible:bg-slate-50"
             >
-              {/* FAQ Question */}
-              <button
-                type="button"
-                onClick={() => setSelected(isOpen ? -1 : index)}
-                aria-expanded={isOpen}
-                className="flex w-full items-center gap-3 p-4 text-left sm:gap-4 sm:p-5"
-              >
-                <span
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${
-                    isOpen
-                      ? "bg-indigo-500 text-white"
-                      : "bg-white/5 text-zinc-400"
-                  }`}
-                >
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-
-                <span className="min-w-0 flex-1 text-sm font-medium leading-6 text-zinc-200">
-                  {item.question || "Untitled question"}
-                </span>
-
-                <span
-                  aria-hidden="true"
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-lg transition-transform duration-300 ${
-                    isOpen
-                      ? "rotate-180 border-indigo-400/30 bg-indigo-500/10 text-indigo-300"
-                      : "border-white/10 text-zinc-400"
-                  }`}
-                >
-                  {isOpen ? "−" : "+"}
-                </span>
-              </button>
-
-              {/* FAQ Content */}
-              <div
-                id={`${type}-answer-${index}`}
-                className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
-                  isOpen
-                    ? "grid-rows-[1fr] opacity-100"
-                    : "grid-rows-[0fr] opacity-0"
+              <span
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${
+                  isOpen ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"
                 }`}
               >
-                <div className="overflow-hidden">
-                  <div className="space-y-5 border-t border-white/10 px-4 py-5 sm:px-6">
-                    {/* Interview Intention */}
-                    <div>
-                      <div className="mb-2 flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="min-w-0 flex-1 pt-1 text-sm font-semibold leading-6 text-slate-900">
+                {item.question || "Untitled question"}
+              </span>
+              <ChevronDownIcon
+                className={`mt-1.5 h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 ${isOpen ? "rotate-180 text-indigo-600" : ""}`}
+              />
+            </button>
 
-                        <h4 className="text-xs font-semibold uppercase tracking-wider text-indigo-300">
-                          Interview Intention
-                        </h4>
-                      </div>
-
-                      <p className="text-sm leading-7 text-zinc-400">
-                        {item.intention || "No intention provided."}
-                      </p>
-                    </div>
-
-                    {/* Suggested Answer */}
-                    <div className="rounded-xl border border-emerald-400/10 bg-emerald-400/[0.04] p-4">
-                      <div className="mb-3 flex items-center gap-2">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-400/10 text-xs text-emerald-300">
-                          ✓
-                        </span>
-
-                        <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-300">
-                          Suggested Answer
-                        </h4>
-                      </div>
-
-                      <p className="whitespace-pre-line text-sm leading-7 text-zinc-300">
-                        {item.answer || "No suggested answer available."}
-                      </p>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-zinc-400">
-                        {type} Question
-                      </span>
-
-                      <span className="text-xs text-zinc-500">
-                        Question {index + 1} of {items.length}
-                      </span>
-                    </div>
+            <div
+              id={panelId}
+              className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+            >
+              <div className="overflow-hidden">
+                <div className="space-y-4 border-t border-slate-100 px-5 pb-6 pt-5 sm:pl-[4.25rem]">
+                  <div>
+                    <h4 className="font-sans text-xs font-semibold uppercase tracking-wider text-indigo-600">
+                      Why they ask this
+                    </h4>
+                    <p className="mt-2 text-sm leading-7 text-slate-600">{item.intention || "No intention provided."}</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-4 ring-1 ring-inset ring-slate-200/70">
+                    <h4 className="flex items-center gap-2 font-sans text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                      <CheckIcon className="h-4 w-4" strokeWidth={2.4} />
+                      How to answer
+                    </h4>
+                    <p className="mt-2 whitespace-pre-line text-sm leading-7 text-slate-700">
+                      {item.answer || "No suggested answer available."}
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  return (
-    <main className="min-h-screen bg-[#09090b] p-3 text-white sm:p-5 lg:p-7">
-      <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-[1600px] flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#0c0c0e] lg:flex-row">
-        {/* LEFT SIDEBAR */}
-        <aside className="flex w-full shrink-0 flex-col border-b border-white/10 bg-[#0a0a0c] lg:w-64 lg:border-b-0 lg:border-r">
-          <div className="border-b border-white/10 p-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500 text-xl">
-                ✦
-              </div>
-
-              <div>
-                <h2 className="font-bold">ResumeAI</h2>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Interview workspace
-                </p>
-              </div>
-            </div>
           </div>
-
-          <div className="p-4">
-            <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
-              Analysis
-            </p>
-
-            <nav
-              aria-label="Interview analysis sections"
-              className="flex flex-col gap-1"
-            >
-              {navigation.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActiveTab(item.id)}
-                  aria-current={activeTab === item.id ? "page" : undefined}
-                  className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left text-sm transition ${
-                    activeTab === item.id
-                      ? "border-indigo-400/20 bg-indigo-500/10 font-medium text-indigo-300"
-                      : "border-transparent text-zinc-400 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  <span
-                    aria-hidden="true"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5"
-                  >
-                    {item.icon}
-                  </span>
-
-                  <span>{item.label}</span>
-
-                  {activeTab === item.id && (
-                    <span
-                      aria-hidden="true"
-                      className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-400"
-                    />
-                  )}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Match Score */}
-          <div className="mt-auto p-4">
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-              <p className="text-xs text-zinc-400">Job Match Score</p>
-
-              <div className="mt-3 flex items-end gap-2">
-                <span className="text-3xl font-bold">{matchScore}</span>
-
-                <span className="mb-1 text-sm text-zinc-500">/ 100</span>
-              </div>
-
-              <div
-                className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10"
-                role="progressbar"
-                aria-label="Job match score"
-                aria-valuenow={matchScore}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <div
-                  className="h-full rounded-full bg-indigo-500 transition-all duration-500"
-                  style={{ width: `${matchScore}%` }}
-                />
-              </div>
-
-              <p className="mt-3 text-xs leading-5 text-zinc-500">
-                Your profile's match with the target job.
-              </p>
-            </div>
-          </div>
-        </aside>
-
-        {/* CENTER CONTENT */}
-        <section className="min-w-0 flex-1 p-5 sm:p-8 lg:p-10">
-          <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6">
-            <div>
-              <p className="text-xs text-zinc-500">
-                Resume Analysis / Workspace
-              </p>
-
-              <h1 className="mt-2 text-lg font-semibold">
-                {navigation.find((item) => item.id === activeTab)?.label}
-              </h1>
-            </div>
-            <div className="flex flex-col items-start">
- <button
-                type="button"
-                // onClick={handleDownloadReport}
-                  onClick={async () => {
-                    setPdfError("");
-                    const err = await getResumePdf(interviewId);
-                    if (err) setPdfError(err);
-                  }}
-                disabled={!report || loading}
-                className="inline-flex items-center gap-2 rounded-xl border border-indigo-400/30 bg-indigo-500/15 px-4 py-2.5 text-sm font-semibold text-indigo-200 transition hover:border-indigo-300/50 hover:bg-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label="Download interview report as PDF"
-              >
-                <svg
-                  aria-hidden="true"
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3" />
-                </svg>
-                {loading && report ? "Generating PDF..." : "Download Resume PDF"}
-              </button>
-              {pdfError && (
-                <p className="mt-2 max-w-xs text-xs text-red-400" role="alert">
-                  {pdfError}
-                </p>
-              )}
-            </div>
-            <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-300">
-              Analysis Ready
-            </span>
-          </div>
- 
-          {/* TECHNICAL QUESTIONS */}
-          {activeTab === "technical" && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-indigo-400">
-                Technical Assessment
-              </p>
-
-              <h2 className="mt-3 text-2xl font-bold sm:text-3xl">
-                Technical Questions
-              </h2>
-
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                Explore interview questions, understand their purpose, and
-                review suggested answers.
-              </p>
-
-              <p className="mb-5 mt-4 text-xs text-zinc-500">
-                {technicalQuestions.length} questions generated
-              </p>
-
-              {renderQuestions(
-                technicalQuestions,
-                "Technical",
-                selectedTechnical,
-                setSelectedTechnical
-              )}
-            </div>
-          )}
-
-          {/* BEHAVIORAL QUESTIONS */}
-          {activeTab === "behavioural" && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-violet-400">
-                Personality & Experience
-              </p>
-
-              <h2 className="mt-3 text-2xl font-bold sm:text-3xl">
-                Behavioral Questions
-              </h2>
-
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                Prepare for questions about teamwork, leadership,
-                communication, and problem-solving.
-              </p>
-
-              <p className="mb-5 mt-4 text-xs text-zinc-500">
-                {behaviourQuestions.length} questions generated
-              </p>
-
-              {renderQuestions(
-                behaviourQuestions,
-                "Behavioral",
-                selectedBehavioural,
-                setSelectedBehavioural
-              )}
-            </div>
-          )}
-
-          {/* ROAD MAP */}
-          {activeTab === "roadmap" && (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-emerald-400">
-                Personalized Learning Plan
-              </p>
-
-              <h2 className="mt-3 text-2xl font-bold sm:text-3xl">
-                Your Road Map
-              </h2>
-
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                Follow your preparation plan to strengthen your skills and
-                prepare for interviews.
-              </p>
-
-              <p className="mb-6 mt-4 text-xs text-zinc-500">
-                {preparationPlan.length} days in your learning plan
-              </p>
-
-              {preparationPlan.length === 0 ? (
-                <div className="rounded-xl border border-white/10 p-6 text-center">
-                  <p className="text-sm text-zinc-400">
-                    No preparation plan available.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  {preparationPlan.map((day, index) => (
-                    <div
-                      key={day._id || day.day || index}
-                      className="relative flex gap-4"
-                    >
-                      {index !== preparationPlan.length - 1 && (
-                        <div className="absolute bottom-0 left-5 top-12 w-px bg-white/10" />
-                      )}
-
-                      <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-400/10 text-xs font-bold text-emerald-300">
-                        {String(day.day ?? index + 1).padStart(2, "0")}
-                      </div>
-
-                      <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.02] p-5">
-                        <p className="text-xs font-medium text-emerald-400">
-                          DAY {day.day ?? index + 1}
-                        </p>
-
-                        <h3 className="mt-2 text-base font-semibold leading-6">
-                          {day.focus || "Preparation"}
-                        </h3>
-
-                        <div className="mt-5">
-                          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                            Tasks to Complete
-                          </p>
-
-                          {Array.isArray(day.tasks) && day.tasks.length > 0 ? (
-                            <ul className="space-y-3">
-                              {day.tasks.map((task, taskIndex) => (
-                                <li
-                                  key={taskIndex}
-                                  className="flex items-start gap-3 text-sm leading-6 text-zinc-300"
-                                >
-                                  <span
-                                    aria-hidden="true"
-                                    className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-white/20 text-[10px] text-zinc-500"
-                                  >
-                                    ✓
-                                  </span>
-
-                                  <span>{task}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-sm text-zinc-500">
-                              No tasks available.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-
-        {/* RIGHT SIDEBAR */}
-        <aside className="w-full shrink-0 border-t border-white/10 bg-[#0a0a0c] p-5 sm:p-7 lg:w-64 lg:border-l lg:border-t-0 lg:p-6">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Skill Gaps</h2>
-
-            <span className="rounded-md border border-amber-400/20 bg-amber-400/10 px-2 py-1 text-[10px] font-semibold text-amber-300">
-              {String(skillGaps.length).padStart(2, "0")} FOUND
-            </span>
-          </div>
-
-          <p className="mt-2 text-xs leading-5 text-zinc-500">
-            Areas to improve for your target role.
-          </p>
-
-          <div className="mt-6 space-y-3">
-            {skillGaps.length === 0 ? (
-              <p className="rounded-xl border border-white/10 p-4 text-xs text-zinc-500">
-                No skill gaps available.
-              </p>
-            ) : (
-              skillGaps.map((item, index) => (
-                <div
-                  key={item._id || `${item.skill}-${index}`}
-                  className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
-                >
-                  <p className="text-sm font-medium leading-5 text-zinc-200">
-                    {item.skill || "Unnamed skill"}
-                  </p>
-
-                  <span
-                    className={`mt-3 inline-flex rounded-md border px-2 py-1 text-[10px] font-medium capitalize ${getSeverityStyle(
-                      item.severity
-                    )}`}
-                  >
-                    {item.severity || "Unknown"} priority
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Improvement Tip */}
-          <div className="mt-8 rounded-xl border border-indigo-400/15 bg-indigo-400/[0.05] p-4">
-            <div className="flex items-center gap-2">
-              <span aria-hidden="true" className="text-lg">
-                ✦
-              </span>
-
-              <h3 className="text-xs font-semibold text-indigo-300">
-                Improvement Tip
-              </h3>
-            </div>
-
-            <p className="mt-3 text-xs leading-6 text-zinc-400">
-              Prioritize missing skills and follow your learning roadmap to
-              prepare for interviews.
-            </p>
-          </div>
-
-          {/* Analysis Summary */}
-          <div className="mt-6 border-t border-white/10 pt-5">
-            <p className="text-xs font-medium text-zinc-300">
-              Analysis Summary
-            </p>
-
-            <div className="mt-4 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-zinc-500">
-                  Technical Questions
-                </span>
-
-                <span className="text-xs text-zinc-300">
-                  {technicalQuestions.length}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-zinc-500">
-                  Behavioral Questions
-                </span>
-
-                <span className="text-xs text-zinc-300">
-                  {behaviourQuestions.length}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-zinc-500">Learning Days</span>
-
-                <span className="text-xs text-zinc-300">
-                  {preparationPlan.length}
-                </span>
-              </div>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </main>
+        );
+      })}
+    </div>
   );
 };
 
-export default Analytics;
+/* -------------------------------- Roadmap -------------------------------- */
+const Roadmap = ({ plan }) => {
+  if (plan.length === 0) {
+    return <p className="card px-6 py-10 text-center text-sm text-slate-500">No preparation plan available.</p>;
+  }
+
+  return (
+    <ol className="relative space-y-4">
+      {plan.map((day, index) => (
+        <li key={day._id || day.day || index} className="relative flex gap-4">
+          {index !== plan.length - 1 && (
+            <span className="absolute bottom-[-1rem] left-5 top-12 w-px bg-slate-200" aria-hidden="true" />
+          )}
+          <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-xs font-bold text-white">
+            {String(day.day ?? index + 1).padStart(2, "0")}
+          </span>
+          <div className="card min-w-0 flex-1 p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Day {day.day ?? index + 1}</p>
+            <h3 className="mt-1 text-base font-bold leading-6">{day.focus || "Preparation"}</h3>
+            {asArray(day.tasks).length > 0 ? (
+              <ul className="mt-4 space-y-2.5">
+                {day.tasks.map((task, taskIndex) => (
+                  <li key={taskIndex} className="flex items-start gap-3 text-sm leading-6 text-slate-600">
+                    <span className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded border border-slate-300 bg-white" aria-hidden="true" />
+                    <span>{task}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-slate-500">No tasks available.</p>
+            )}
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+};
+
+/* -------------------------------- Skeleton -------------------------------- */
+const AnalysisSkeleton = () => (
+  <div className="container-page animate-pulse py-10" aria-label="Loading report">
+    <div className="h-4 w-48 rounded bg-slate-200" />
+    <div className="mt-4 h-8 w-80 max-w-full rounded bg-slate-200" />
+    <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="h-40 rounded-2xl bg-slate-200" />
+      <div className="grid min-w-0 grid-cols-2 gap-5 lg:col-span-2">
+        {[0, 1, 2, 3].map((i) => <div key={i} className="h-[4.5rem] rounded-2xl bg-slate-200" />)}
+      </div>
+    </div>
+    <div className="mt-8 h-96 rounded-2xl bg-slate-200" />
+  </div>
+);
+
+/* -------------------------------- Analysis -------------------------------- */
+const Analysis = () => {
+  const { interviewId } = useParams();
+  const { report, getReportById, getResumePdf } = useInterview();
+  const [status, setStatus] = useState("loading"); // loading | ready | error
+  const [activeTab, setActiveTab] = useState("technical");
+  const [downloading, setDownloading] = useState(false);
+  const [pdfError, setPdfError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    // Agar context mein yahi report pehle se poori hai (abhi generate hui) to dobara fetch mat karo
+    if (report?._id === interviewId && Array.isArray(report.technicalQuestions)) {
+      setStatus("ready");
+      return undefined;
+    }
+    setStatus("loading");
+    getReportById(interviewId).then((result) => {
+      if (active) setStatus(result ? "ready" : "error");
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interviewId, getReportById]);
+
+  const handleDownload = async () => {
+    setPdfError("");
+    setDownloading(true);
+    const error = await getResumePdf(interviewId);
+    setDownloading(false);
+    if (error) setPdfError(error);
+  };
+
+  if (status === "loading") return <AnalysisSkeleton />;
+
+  if (status === "error" || !report) {
+    return (
+      <section className="container-page flex min-h-[60vh] flex-col items-center justify-center py-20 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
+          <AlertIcon className="h-6 w-6" />
+        </span>
+        <h1 className="mt-5 text-2xl font-bold">Report not found</h1>
+        <p className="mt-2 max-w-md text-slate-500">
+          This report doesn't exist or you don't have access to it.
+        </p>
+        <Link to="/dashboard#reports" className="btn-primary mt-8">
+          <ArrowLeftIcon className="h-4 w-4" />
+          Back to all reports
+        </Link>
+      </section>
+    );
+  }
+
+  const technical = asArray(report.technicalQuestions);
+  const behavioral = asArray(report.behaviourQuestions);
+  const plan = asArray(report.preparationPlan);
+  const skillGaps = [...asArray(report.skillGaps)].sort(
+    (a, b) => (SEVERITY_ORDER[a.severity?.toLowerCase()] ?? 3) - (SEVERITY_ORDER[b.severity?.toLowerCase()] ?? 3)
+  );
+  const score = Math.min(100, Math.max(0, Math.round(Number(report.matchScore) || 0)));
+  const tone = scoreTone(score);
+  const createdAt = report.createdAt
+    ? new Date(report.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })
+    : null;
+
+  const stats = [
+    { label: "Technical questions", value: technical.length, icon: CodeIcon },
+    { label: "Behavioral questions", value: behavioral.length, icon: UsersIcon },
+    { label: "Skill gaps found", value: skillGaps.length, icon: TargetIcon },
+    { label: "Days in plan", value: plan.length, icon: RouteIcon },
+  ];
+  const counts = { technical: technical.length, behavioral: behavioral.length, roadmap: plan.length };
+
+  return (
+    <div className="pb-20">
+      {/* Header */}
+      <section className="border-b border-slate-200 bg-white">
+        <div className="container-page py-8">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-slate-500">
+            <Link to="/dashboard" className="hover:text-slate-900">Dashboard</Link>
+            <span aria-hidden="true">/</span>
+            <Link to="/dashboard#reports" className="hover:text-slate-900">Reports</Link>
+            <span aria-hidden="true">/</span>
+            <span className="truncate font-medium text-slate-900">{report.title || "Report"}</span>
+          </nav>
+
+          <div className="mt-5 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-3xl font-bold tracking-tight">{report.title || "Interview report"}</h1>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Analysis ready
+                </span>
+              </div>
+              {createdAt && (
+                <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
+                  <CalendarIcon className="h-4 w-4" />
+                  Generated on {createdAt}
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Link to="/dashboard#reports" className="btn-secondary">
+                  <ArrowLeftIcon className="h-4 w-4" />
+                  All reports
+                </Link>
+                <button type="button" onClick={handleDownload} disabled={downloading} className="btn-primary">
+                  {downloading ? <Spinner className="h-4 w-4" /> : <DownloadIcon className="h-4 w-4" />}
+                  {downloading ? "Preparing PDF..." : "Download tailored resume"}
+                </button>
+              </div>
+              <div aria-live="polite" className="text-xs sm:text-right">
+                {downloading && <p className="text-slate-500">This can take up to a minute.</p>}
+                {pdfError && (
+                  <p className="flex items-center gap-1.5 font-medium text-rose-600 sm:justify-end" role="alert">
+                    <AlertIcon className="h-3.5 w-3.5" />
+                    {pdfError}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Overview */}
+      <section className="container-page mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="card flex min-w-0 items-center gap-6 p-6">
+          <ScoreRing score={score} />
+          <div>
+            <p className="text-sm font-medium text-slate-500">Job match score</p>
+            <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${tone.badge}`}>
+              {tone.label}
+            </span>
+          </div>
+        </div>
+        <div className="grid min-w-0 grid-cols-2 gap-5 lg:col-span-2">
+          {stats.map(({ label, value, icon: Icon }) => (
+            <div key={label} className="card flex items-center gap-4 p-5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                <Icon className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-display text-2xl font-bold leading-none text-slate-900">{value}</p>
+                <p className="mt-1.5 text-sm leading-5 text-slate-500">{label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Content */}
+      <section className="container-page mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0">
+          <div role="tablist" aria-label="Report sections" className="grid grid-cols-3 gap-1 rounded-xl border border-slate-200 bg-white p-1">
+            {TABS.map(({ id, label, icon: Icon }) => {
+              const selected = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  id={`tab-${id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  aria-controls={`tabpanel-${id}`}
+                  onClick={() => setActiveTab(id)}
+                  className={`flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-2.5 sm:gap-2 sm:px-4 text-sm font-semibold transition ${
+                    selected ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                >
+                  <Icon className="hidden h-4 w-4 sm:block" />
+                  {label}
+                  <span className={`rounded-md px-1.5 py-0.5 text-xs ${selected ? "bg-white/15" : "bg-slate-100 text-slate-500"}`}>
+                    {counts[id]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div id={`tabpanel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`} className="mt-6">
+            {activeTab === "technical" && (
+              <>
+                <SectionIntro title="Technical questions" text="Questions an interviewer is likely to ask for this role, with the intention behind each and how to answer it." />
+                <QuestionList key="technical" items={technical} type="technical" />
+              </>
+            )}
+            {activeTab === "behavioral" && (
+              <>
+                <SectionIntro title="Behavioral questions" text="Prepare stories about teamwork, ownership, communication and problem-solving." />
+                <QuestionList key="behavioral" items={behavioral} type="behavioral" />
+              </>
+            )}
+            {activeTab === "roadmap" && (
+              <>
+                <SectionIntro title="Your 7-day roadmap" text="A focused daily plan to close your skill gaps before the interview." />
+                <Roadmap plan={plan} />
+              </>
+            )}
+          </div>
+        </div>
+
+        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
+          <div className="card p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold">Skill gaps</h2>
+              <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{skillGaps.length}</span>
+            </div>
+            <p className="mt-1 text-sm text-slate-500">Areas to strengthen for this role.</p>
+
+            {skillGaps.length === 0 ? (
+              <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-500">No skill gaps found.</p>
+            ) : (
+              <ul className="mt-5 divide-y divide-slate-100">
+                {skillGaps.map((gap, index) => {
+                  const severity = gap.severity?.toLowerCase();
+                  return (
+                    <li key={gap._id || `${gap.skill}-${index}`} className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                      <span className="text-sm font-medium leading-6 text-slate-800">{gap.skill || "Unnamed skill"}</span>
+                      <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold capitalize ring-1 ring-inset ${SEVERITY_STYLES[severity] || "bg-slate-50 text-slate-600 ring-slate-500/20"}`}>
+                        {severity || "unknown"}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          <div className="rounded-2xl bg-slate-900 p-6 text-slate-300">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white">
+              <SparkleIcon className="h-5 w-5" />
+            </span>
+            <h2 className="mt-4 text-base font-bold text-white">Next step</h2>
+            <p className="mt-2 text-sm leading-6">
+              Start with the high-priority gaps, follow the roadmap daily, and
+              practice answering each question out loud.
+            </p>
+            <button type="button" onClick={() => setActiveTab("roadmap")} className="mt-4 text-sm font-semibold text-indigo-300 hover:text-indigo-200">
+              Open roadmap →
+            </button>
+          </div>
+        </aside>
+      </section>
+    </div>
+  );
+};
+
+const SectionIntro = ({ title, text }) => (
+  <div className="mb-5">
+    <h2 className="text-xl font-bold">{title}</h2>
+    <p className="mt-1 text-sm text-slate-500">{text}</p>
+  </div>
+);
+
+export default Analysis;
